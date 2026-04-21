@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCR一体机项目看板 | 截止 2026-04-21</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif; background: #0a0f1a; color: #e2e8f0; font-size: 13px; }
+  .header { background: linear-gradient(135deg, #0f2744 0%, #0d1f3c 50%, #0a1628 100%); border-bottom: 3px solid #3b82f6; padding: 28px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: 1px; }
+  .header .subtitle { font-size: 14px; color: #93c5fd; margin-top: 6px; }
+  .header .meta { font-size: 12px; color: #64748b; text-align: right; line-height: 1.8; }
+  .stats-bar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px; padding: 20px 40px; background: #0f172a; border-bottom: 1px solid #1e293b; }
+  .stat-card { background: #1e293b; border-radius: 10px; padding: 16px 14px; text-align: center; border: 1px solid #334155; transition: all 0.2s; }
+  .stat-card:hover { transform: translateY(-2px); border-color: #475569; }
+  .stat-card .number { font-size: 30px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+  .stat-card .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card.done .number { color: #4ade80; } .stat-card.prog .number { color: #fbbf24; } .stat-card.total .number { color: #60a5fa; }
+  .stat-card.overdue .number { color: #f87171; } .stat-card.urgent .number { color: #fb923c; }
+  .stat-card.cost .number { color: #c084fc; } .stat-card.todo .number { color: #94a3b8; }
+  .progress-row { display: flex; height: 32px; background: #1e293b; overflow: hidden; }
+  .pb-done { background: linear-gradient(90deg, #166534, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; min-width: 50px; padding: 0 8px; }
+  .pb-prog { background: linear-gradient(90deg, #92400e, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; min-width: 30px; padding: 0 8px; }
+  .pb-other { background: #374151; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9ca3af; }
+  .risk-bar { display: flex; gap: 12px; padding: 12px 40px; background: #1e293b; border-bottom: 1px solid #334155; overflow-x: auto; }
+  .risk-item { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; font-size: 12px; white-space: nowrap; }
+  .risk-overdue { background: #7f1d1d; color: #fca5a5; } .risk-urgent { background: #7c2d12; color: #fdba74; }
+  .risk-week { background: #78350f; color: #fde68a; } .risk-nodeadline { background: #1e3a5f; color: #93c5fd; }
+  .layout { display: grid; grid-template-columns: 1fr 320px; }
+  .main { padding: 24px 36px; overflow: auto; }
+  .section-title { font-size: 15px; font-weight: 700; color: #60a5fa; padding: 10px 0 8px 0; border-bottom: 2px solid #1e3a5f; margin-bottom: 12px; margin-top: 20px; display: flex; align-items: center; gap: 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .chain { background: linear-gradient(135deg, #0f2744, #1a1f35); border: 1px solid #1e3a5f; border-radius: 12px; padding: 18px 24px; margin-bottom: 20px; }
+  .chain h3 { color: #93c5fd; font-size: 13px; margin-bottom: 12px; }
+  .chain-item { display: flex; align-items: center; padding: 5px 0; font-size: 13px; color: #cbd5e1; }
+  .chain-badge { display: inline-block; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700; margin-right: 10px; color: #fff; }
+  .task-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .task-table th { background: #1e293b; color: #93c5fd; padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #334155; position: sticky; top: 0; white-space: nowrap; }
+  .task-table td { padding: 7px 10px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+  .task-table tr:hover td { background: #1e293b; } .task-table tr.done-row td { opacity: 0.55; }
+  .task-table tr.overdue-row td { background: #1a0808; } .task-table tr.urgent-row td { background: #1a0f05; }
+  .status-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-Done { background: #14532d; color: #86efac; } .badge-In-progress { background: #78350f; color: #fde68a; }
+  .badge-Not-started { background: #1f2937; color: #9ca3af; } .badge-Unknown { background: #1f2937; color: #6b7280; }
+  .badge-Abort { background: #450a0a; color: #fca5a5; }
+  .dl-ok { color: #86efac; font-size: 11px; } .dl-overdue { color: #f87171; font-weight: 700; font-size: 11px; }
+  .dl-urgent { color: #fb923c; font-weight: 700; font-size: 11px; } .dl-week { color: #fbbf24; font-size: 11px; }
+  .dl-none { color: #6b7280; font-size: 11px; }
+  .pri-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .pri-高 { background: #7f1d1d; color: #fca5a5; } .pri-中 { background: #78350f; color: #fde68a; }
+  .pri-低 { background: #1e3a5f; color: #93c5fd; } .pri-未设置 { background: #1f2937; color: #6b7280; }
+  .sidebar { background: #0f172a; border-left: 1px solid #1e293b; padding: 20px 16px; overflow: auto; }
+  .ring-container { text-align: center; padding: 20px 0; border-bottom: 1px solid #1e293b; margin-bottom: 14px; }
+  .ring-title { font-size: 12px; color: #64748b; margin-bottom: 14px; }
+  .member-card { background: #1e293b; border-radius: 8px; padding: 10px; margin-bottom: 6px; border: 1px solid #334155; }
+  .member-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .member-name { font-weight: 600; color: #e2e8f0; font-size: 12px; } .member-count { font-size: 10px; color: #64748b; }
+  .bar-bg { height: 5px; background: #334155; border-radius: 3px; overflow: hidden; }
+  .bar-done { height: 100%; background: #22c55e; border-radius: 3px; float: left; }
+  .bar-prog { height: 100%; background: #f59e0b; border-radius: 3px; float: left; }
+  .member-stats { font-size: 10px; color: #64748b; margin-top: 4px; }
+  .module-item { background: #1e293b; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid #334155; }
+  .module-top { display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 5px; }
+  .module-bar-bg { height: 4px; background: #334155; border-radius: 2px; }
+  .module-bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 2px; }
+  .alert-card { padding: 8px 10px; border-radius: 6px; margin-bottom: 5px; border-left: 3px solid; }
+  .alert-overdue { background: #1a0808; border-color: #f87171; }
+  .alert-urgent { background: #1a0f05; border-color: #fb923c; }
+  .alert-name { font-size: 12px; color: #e2e8f0; margin-bottom: 3px; }
+  .alert-meta { font-size: 10px; color: #64748b; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 10px 40px; background: #0f172a; border-top: 1px solid #1e293b; font-size: 11px; color: #64748b; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  details { margin-bottom: 2px; }
+  summary { padding: 6px 10px; cursor: pointer; background: #1e293b; border-radius: 6px; font-size: 12px; color: #94a3b8; }
+  summary:hover { background: #334155; }
+  details[open] summary { background: #334155; border-radius: 6px 6px 0 0; color: #e2e8f0; }
+  details .inner-table { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>PCR一体机项目看板</h1>
+    <div class="subtitle">科研任务管理平台 · 完整父子层级架构 · 截止 2026-04-21</div>
+  </div>
+  <div class="meta">
+    <div>数据截止：2026-04-21</div>
+    <div style="margin-top:4px">数据来源：Notion API 实时拉取</div>
+    <div style="margin-top:4px;color:#475569">已排除会议/讨论/培训等非项目任务</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-card total"><div class="number">149</div><div class="label">项目总任务</div></div>
+  <div class="stat-card done"><div class="number">81</div><div class="label">已完成</div></div>
+  <div class="stat-card prog"><div class="number">30</div><div class="label">进行中</div></div>
+  <div class="stat-card todo"><div class="number">9</div><div class="label">未开始/取消</div></div>
+  <div class="stat-card overdue"><div class="number">26</div><div class="label">已逾期</div></div>
+  <div class="stat-card urgent"><div class="number">0</div><div class="label">即将到期</div></div>
+  <div class="stat-card urgent" style="background:#1e293b"><div class="number">5</div><div class="label" style="color:#64748b">无截止日期</div></div>
+  <div class="stat-card cost"><div class="number">213</div><div class="label">费用(万)</div></div>
+</div>
+
+<div class="progress-row">
+  <div class="pb-done" style="width:54.4%">54.4%</div>
+  <div class="pb-prog" style="width:20.1%">20.1%</div>
+  <div class="pb-other">9项未开始/取消</div>
+</div>
+
+  <div class='risk-bar'>
+    <span style='color:#475569;font-size:12px;margin-right:4px;white-space:nowrap'>🚨 风险预警:</span>
+    <div class='risk-item risk-overdue'>⚠️ 已逾期未完成: 26 项</div>
+    <div class='risk-item risk-nodeadline'>📋 进行中但无截止日期: 5 项（建议补全）</div>
+  </div>
+
+
+<div class="layout">
+  <div class="main">
+    <div class="section-title">📍 完整父子层级追溯（7级）</div>
+        <div class='chain'>
+      <h3>PCR一体机项目 WBS 层级结构</h3>
+      <div class='chain-item'>
+        <span class='chain-badge' style='background:#3b82f6'>L1</span>
+        <span>📁 科研任务管理平台</span>
+      </div>
+      <div class='chain-item'>
+        <span class='chain-badge' style='background:#2563eb'>L2</span>
+        <span>📂 PCR一体机项目</span>
+      </div>
+      <div class='chain-item'>
+        <span class='chain-badge' style='background:#1d4ed8'>L3</span>
+        <span>📋 01基于MBSE开发中型一体机</span>
+      </div>
+      <div class='chain-item'>
+        <span class='chain-badge' style='background:#1e40af'>L4</span>
+        <span>📋 003系统设计、验证与确认</span>
+      </div>
+      <div class='chain-item'>
+        <span class='chain-badge' style='background:#1e3a5f'>L5</span>
+        <span>🔧 加热器</span>
+        <span style='margin-left:auto;font-size:11px;color:#64748b'>截止 2026-04-30 | In progress</span>
+      </div>
+      <div class='chain-item'>
+        <span class='chain-badge' style='background:#312e81'>L6</span>
+        <span>🔸 加热线圈设计与优化</span>
+        <span style='margin-left:auto;font-size:11px;color:#64748b'>In progress</span>
+      </div>
+      <div class='chain-item'>
+        <span class='chain-badge' style='background:#166534'>L7</span>
+        <span>🔹 各主线圈分3段方案线圈设计</span>
+        <span style='margin-left:auto;font-size:11px;color:#64748b'>✅ Done | 截止 2026-04-17</span>
+      </div>
+    </div>
+
+    
+    <div class="section-title">🚨 风险任务（逾期 + 即将到期，共 26 项）</div>
+    <table class="task-table">
+      <thead><tr><th style="width:32%">任务名称</th><th style="width:10%">状态</th><th style="width:8%">优先级</th><th style="width:16%">负责人</th><th style="width:20%">上级任务</th><th style="width:14%">截止日期</th></tr></thead>
+      <tbody>
+          <tr class=overdue-row>
+            <td>超平载网2.0，控制溢胶范围，重做实验</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2024-08-09</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>工艺设计</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2023-07-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>01ESI喷射方案</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>陈伟栋,王亦飞</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-04-25</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>113 样品筛选模块（二代升级）</td>
+            <td><span class='status-badge badge-Not-started'>Not started</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2026-04-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>01体硅芯片载网</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2023-06-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>性能分析</td>
+            <td><span class='status-badge badge-Not-started'>Not started</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2023-09-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>03点胶方案</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-04-13</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>001 需求分析与架构设计</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>polar</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2024-07-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>狭缝吸水测试</td>
+            <td><span class='status-badge badge-Abort-不参与记录工作进度'>Abort-不参与记录工作进度</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-04-25</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>402卡槽</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>余志坚</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2024-12-31</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>505 制样冷冻台</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>xianzhike</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-03-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>502 加样（减薄）方案</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>王亦飞</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-03-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>801-3  电镜内位置校准</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>吴李杰</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-05-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>08 减薄方案</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>未分配</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2026-01-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>504 液膜厚度测定</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>陈伟栋</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-03-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>00-short loop验证</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>庄磊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2024-07-31</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>卡槽结构设计</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>余志坚</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-04-25</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>半成品芯片测试</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>王亦飞</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-04-30</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>5. 样机设计</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>梁宇俊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-05-06</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>4. 算法设计及数值分析</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-高'>高</span></td>
+            <td>黎以宁</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-04-09</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>002 概念视频</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>梁宇俊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2024-07-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>003 项目管理任务</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2024-07-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>501 位置较准（加样和厚度测定）</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>吴李杰</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-03-01</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>体硅载网铺膜测试-氮化硅/石墨烯</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-04-23</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>直扩一体机研制</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙宝策</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-08-31</span></td>
+          </tr>
+          <tr class=overdue-row>
+            <td>PVD退火后的应力值测试</td>
+            <td><span class='status-badge badge-In-progress'>In progress</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>庄磊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>⚠️ 2025-12-31</span></td>
+          </tr>
+      </tbody></table>
+
+    
+    <div class="section-title">🔄 进行中任务 (30 项)</div>
+    <table class="task-table">
+      <thead><tr><th style="width:30%">任务名称</th><th style="width:9%">状态</th><th style="width:8%">优先级</th><th style="width:14%">负责人</th><th style="width:20%">上级任务</th><th style="width:9%">截止</th><th style="width:10%">紧急度</th></tr></thead>
+      <tbody>
+          <tr>
+            <td>超平载网2.0，控制溢胶范围，重做实验</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2024-08-09</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>工艺设计</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2023-07-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>01ESI喷射方案</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>陈伟栋,王亦飞</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-04-25</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>01体硅芯片载网</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2023-06-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>完成冷冻电镜样品制备仪集成搭建</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>黄永健</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2026-05-31</span></td>
+            <td><span style='font-size:11px'>✅</span></td>
+          </tr>
+          <tr>
+            <td>03点胶方案</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-04-13</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>001 需求分析与架构设计</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>polar</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2024-07-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>402卡槽</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>余志坚</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2024-12-31</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>505 制样冷冻台</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>xianzhike</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-03-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>502 加样（减薄）方案</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>王亦飞</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-03-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>上位机软件开发（国创中心）</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>黄永健</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2026-05-31</span></td>
+            <td><span style='font-size:11px'>✅</span></td>
+          </tr>
+          <tr>
+            <td>801-3  电镜内位置校准</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>吴李杰</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-05-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>08 减薄方案</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>未分配</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2026-01-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>504 液膜厚度测定</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>陈伟栋</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-03-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>00-short loop验证</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>庄磊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2024-07-31</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>卡槽结构设计</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>余志坚</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-04-25</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>04-封装</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>庄磊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+            <td><span style='font-size:11px'>⚠️ </span></td>
+          </tr>
+          <tr>
+            <td>半成品芯片测试</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>王亦飞</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-04-30</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>5. 样机设计</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>梁宇俊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-05-06</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>4. 算法设计及数值分析</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-高'>高</span></td>
+            <td>黎以宁</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-04-09</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>002 概念视频</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>梁宇俊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2024-07-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>003 项目管理任务</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2024-07-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>501 位置较准（加样和厚度测定）</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>吴李杰</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-03-01</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>体硅载网铺膜测试-氮化硅/石墨烯</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-04-23</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>直扩一体机研制</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙宝策</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-08-31</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>PVD退火后的应力值测试</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>庄磊</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-overdue'>2025-12-31</span></td>
+            <td><span style='font-size:11px'></span></td>
+          </tr>
+          <tr>
+            <td>磁珠提取流程开发</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>吴金秀</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+            <td><span style='font-size:11px'>⚠️ </span></td>
+          </tr>
+          <tr>
+            <td>样本前处理模块</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>吴金秀</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+            <td><span style='font-size:11px'>⚠️ </span></td>
+          </tr>
+          <tr>
+            <td>直扩流程开发和测试</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>吴金秀</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+            <td><span style='font-size:11px'>⚠️ </span></td>
+          </tr>
+          <tr>
+            <td>直扩一体机软件</td>
+            <td><span class='status-badge badge-In-progress'>🔄</span></td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>倪晓龙</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+            <td><span style='font-size:11px'>⚠️ </span></td>
+          </tr>
+      </tbody></table>
+
+    
+    <div class="section-title">⬜ 未开始任务 (5 项)</div>
+    <table class="task-table">
+      <thead><tr><th style="width:35%">任务名称</th><th style="width:10%">优先级</th><th style="width:20%">负责人</th><th style="width:20%">上级任务</th><th style="width:15%">截止日期</th></tr></thead>
+      <tbody>
+          <tr>
+            <td>113 样品筛选模块（二代升级）</td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>2026-04-01</span></td>
+          </tr>
+          <tr>
+            <td>性能分析</td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>孙芳</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>2023-09-01</span></td>
+          </tr>
+          <tr>
+            <td>等离子风</td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>未分配</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+          </tr>
+          <tr>
+            <td>1. 原理验证系统测试</td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>宋鹏鸣</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+          </tr>
+          <tr>
+            <td>亲水狭缝</td>
+            <td><span class='pri-badge pri-未设置'>未设置</span></td>
+            <td>未分配</td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-none'>无</span></td>
+          </tr>
+      </tbody></table>
+
+    
+    <div class="section-title">✅ 已完成任务摘要 (81 项)</div>
+    <details>
+      <summary>点击展开查看 81 项已完成任务</summary>
+      <table class="task-table inner-table">
+        <thead><tr><th style="width:38%">任务名称</th><th style="width:14%">负责人</th><th style="width:22%">上级任务</th><th style="width:13%">截止日期</th><th style="width:13%">模块</th></tr></thead>
+        <tbody>
+          <tr class='done-row'>
+            <td>第二次光刻制作氮化硅孔/镍钛孔</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2024-08-19</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '04流片过程数据'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>金属片双面研磨</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2024-02-20</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '00short loop测试'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>减薄和CMP</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2024-08-29</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '04流片过程数据'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>4张八寸晶圆八切四</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2024-07-10</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '04流片过程数据'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>体硅载网芯片工艺和版图</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01体硅芯片载网'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>结构设计</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-25</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '00301结构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>废弃方案设计1.0-电镀铜</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2023-11-13</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '02结构与工艺设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>NiTi腐蚀实验</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-09-11</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '00short loop测试'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>V2.0样品片流片进度</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2023-01-16</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01体硅芯片载网'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>1.2各子系统需求分解（尝试版本）</td>
+            <td><span style='font-size:11px'>陈伟栋</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-15</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '001 需求分析与架构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>整体工艺方案</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-02-28</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '03结构与工艺设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>供应商沟通</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-13</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V1</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-25</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '004 冷冻电镜样品载体'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>demo样机测试</td>
+            <td><span style='font-size:11px'>陈伟栋</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-15</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>概念方案设计</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-14</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>加工方案设计</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-28</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>1.1系统初步需求分析（尝试版本）</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-02-23</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '001 需求分析与架构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>需求明确</td>
+            <td><span style='font-size:11px'>陈伟栋</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-26</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01001需求明确'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>测厚应用需求沟通及初步技术验证（悉识科技）</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-25</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>06加样方案决定</td>
+            <td><span style='font-size:11px'>吴李杰</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-10-31</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>各模块腔环需求确定</td>
+            <td><span style='font-size:11px'>陈伟栋</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-18</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '腔室环境'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>01金金共晶连接方案与测试</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-18</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '401 载网'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>接口需求明确</td>
+            <td><span style='font-size:11px'>陈伟栋</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-11</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽的外发加工</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-10</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '402卡槽'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>第一阶段ESI喷雾测试</td>
+            <td><span style='font-size:11px'>陈伟栋</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-25</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>ESI喷雾应用测试方案（分三步）</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-15</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>喷雾特写镜头</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-15</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V3</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-31</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '402卡槽'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V7</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-04</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '402卡槽'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>根据图像做厚度测量的模型构建</td>
+            <td><span style='font-size:11px'>宋鹏鸣</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-25</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '005 冷冻电镜样品制备仪'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V8</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-11</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '402卡槽'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>转接板电连接结构设计</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-07</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01-2025年04月流片'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V5</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-02</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '402卡槽'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V2</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-28</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '卡槽结构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V6</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-03</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '卡槽结构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>物理模型计算</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-03</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01ESI喷射方案'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>至四月的工作进展</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-11</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '年度进展报告'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>构建微通道</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-07</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '腔室环境'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V4</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-01</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '卡槽结构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>3. LED控制</td>
+            <td><span style='font-size:11px'>Wujiajia</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-09</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': ''}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>掩模版绘制：芯片加热电极优化</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-08</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '04加工版图'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>ESI喷射芯片加工追踪</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-18</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01ESI喷射方案'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>冷冻样品制备-喷雾流程动画V1</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-23</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '002 概念视频'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>半成品测试软硬件方案</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-09</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>a测试片湿法刻蚀，激光切割</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-08</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>2. 温度控制</td>
+            <td><span style='font-size:11px'>宋鹏鸣</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': ''}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>冷冻测试结构件设计</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-16</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>电路控制板</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-16</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>002号陪片</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-18</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>e-con相机测试</td>
+            <td><span style='font-size:11px'>Wujiajia</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-09</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '1. 原理验证系统测试'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>半成品实验测试方案</td>
+            <td><span style='font-size:11px'>王亦飞</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-10</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>200nmSiN+0.14umSi半成品芯片测试</td>
+            <td><span style='font-size:11px'>王亦飞</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-12</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>测试仪器及软件准备</td>
+            <td><span style='font-size:11px'>王亦飞</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-18</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '05流片过程数据V1'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>b测试片-wire bongding</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-09</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '002号陪片'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>知识产权管理</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '003 项目管理任务'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>IMX 183温度测试</td>
+            <td><span style='font-size:11px'>Wujiajia</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-11</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '2. 温度控制'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>仿真模型构建</td>
+            <td><span style='font-size:11px'>陈伟栋</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-09</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01ESI喷射方案'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>07一种小尺寸芯片适配大尺寸电镜样品杆的封装结构及方法</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-11</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '003 项目管理任务'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>01封装片与芯片连接方案与测试</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-10</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '03封装片与芯片连接方案设计与测试'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽/封装片/盖片-材料选择方案</td>
+            <td><span style='font-size:11px'>xianzhike</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-09</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '卡槽结构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽在电镜中上下样V4</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-11</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '电镜上下样'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>02卡槽&转接板&芯片金图形的金金共晶导电性测试</td>
+            <td><span style='font-size:11px'>庄磊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-05-09</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '02卡槽与封装片连接方案设计与测试'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V8.1</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-15</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '卡槽结构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>4波长荧光模组的箱内测试</td>
+            <td><span style='font-size:11px'>Wujiajia</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-15</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '1. 原理验证系统测试'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>ANTcryo退火处理观测膜褶皱情况</td>
+            <td><span style='font-size:11px'>孙芳</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-18</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '00-short loop验证'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>步进需求参数：电镜内部样品转运方式/喷雾方式的运动</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-16</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '01需求'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽在电镜中上下样V2</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-03-12</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '电镜上下样'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽在电镜中上下样V1</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2024-11-04</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '电镜上下样'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>卡槽结构设计V8.2</td>
+            <td><span style='font-size:11px'>梁宇俊</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>2025-04-30</span></td>
+            <td><span style='font-size:10px;color:#64748b'>{'id': 'uAhw', 'type': 'formula', 'formula': {'type': 'string', 'string': '卡槽结构设计'}}</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>一体机架构方案确定</td>
+            <td><span style='font-size:11px'>全小红</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>光谱模组 PCR仪结构设计-LED光源部分</td>
+            <td><span style='font-size:11px'>张天佑</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>模组配合沟通设计</td>
+            <td><span style='font-size:11px'>张天佑</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>光谱模组 PCR仪结构设计-光谱模组部分</td>
+            <td><span style='font-size:11px'>张天佑</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>样本卡条设计沟通</td>
+            <td><span style='font-size:11px'>张天佑</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>磁珠法不同方案测试</td>
+            <td><span style='font-size:11px'>吴金秀</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>磁珠提取流程开发</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>软件</td>
+            <td><span style='font-size:11px'>全小红</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>硬件接口连接方案</td>
+            <td><span style='font-size:11px'>管专</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>硬件电路</td>
+            <td><span style='font-size:11px'>管专</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>确定一体机6.30版本方案</td>
+            <td><span style='font-size:11px'>管专</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩一体机研制</span></td>
+          </tr>
+          <tr class='done-row'>
+            <td>福州大学快速扩增体系验证</td>
+            <td><span style='font-size:11px'>吴金秀</span></td>
+            <td><span style='font-size:10px;color:#64748b'>—</span></td>
+            <td><span class='dl-ok'>—</span></td>
+            <td><span style='font-size:10px;color:#64748b'>直扩流程开发和测试</span></td>
+          </tr>
+        </tbody></table></details>
+
+  </div>
+  <div class="sidebar">
+    <div class="section-title" style="margin-top:0">📊 项目完成率</div>
+    <div class="ring-container">
+      <div class="ring-title">项目整体进度</div>
+      <svg width="130" height="130" viewBox="0 0 130 130">
+        <circle cx="65" cy="65" r="52" fill="none" stroke="#334155" stroke-width="12"/>
+        <circle cx="65" cy="65" r="52" fill="none" stroke="#22c55e" stroke-width="12"
+          stroke-dasharray="177.6 326.7"
+          stroke-linecap="round"
+          transform="rotate(-90 65 65)"/>
+        <text x="65" y="60" text-anchor="middle" font-size="26" font-weight="800" fill="#4ade80">54.4%</text>
+        <text x="65" y="80" text-anchor="middle" font-size="11" fill="#64748b">81/149</text>
+      </svg>
+    </div>
+    <div class="section-title">📈 状态分布</div>
+        <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#cbd5e1;margin-bottom:3px">
+        <span>✅ 已完成</span><span style="color:#22c55e">81 (54.4%)</span>
+      </div>
+      <div style="background:#334155;border-radius:3px;height:6px;overflow:hidden">
+        <div style="width:54.4%;height:100%;background:#22c55e;border-radius:3px"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#cbd5e1;margin-bottom:3px">
+        <span>🔄 进行中</span><span style="color:#f59e0b">30 (20.1%)</span>
+      </div>
+      <div style="background:#334155;border-radius:3px;height:6px;overflow:hidden">
+        <div style="width:20.1%;height:100%;background:#f59e0b;border-radius:3px"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#cbd5e1;margin-bottom:3px">
+        <span>⬜ 未开始</span><span style="color:#64748b">5 (3.4%)</span>
+      </div>
+      <div style="background:#334155;border-radius:3px;height:6px;overflow:hidden">
+        <div style="width:3.4%;height:100%;background:#64748b;border-radius:3px"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#cbd5e1;margin-bottom:3px">
+        <span>❌ 取消</span><span style="color:#ef4444">4 (2.7%)</span>
+      </div>
+      <div style="background:#334155;border-radius:3px;height:6px;overflow:hidden">
+        <div style="width:2.7%;height:100%;background:#ef4444;border-radius:3px"></div>
+      </div>
+    </div>
+
+    <div class="section-title">👥 工程师贡献排行</div>
+        <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">庄磊</span>
+        <span class="member-count">22项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:82%"></div>
+        <div class="bar-prog" style="width:14%"></div>
+      </div>
+      <div class="member-stats">✅18 🔄3 剩余:1</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">孙芳</span>
+        <span class="member-count">20项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:50%"></div>
+        <div class="bar-prog" style="width:30%"></div>
+      </div>
+      <div class="member-stats">✅10 🔄6 剩余:4</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">梁宇俊</span>
+        <span class="member-count">18项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:89%"></div>
+        <div class="bar-prog" style="width:11%"></div>
+      </div>
+      <div class="member-stats">✅16 🔄2 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">陈伟栋</span>
+        <span class="member-count">9项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:78%"></div>
+        <div class="bar-prog" style="width:22%"></div>
+      </div>
+      <div class="member-stats">✅7 🔄2 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">xianzhike</span>
+        <span class="member-count">9项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:89%"></div>
+        <div class="bar-prog" style="width:11%"></div>
+      </div>
+      <div class="member-stats">✅8 🔄1 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">王亦飞</span>
+        <span class="member-count">6项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:50%"></div>
+        <div class="bar-prog" style="width:50%"></div>
+      </div>
+      <div class="member-stats">✅3 🔄3 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">张天佑</span>
+        <span class="member-count">5项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:80%"></div>
+        <div class="bar-prog" style="width:0%"></div>
+      </div>
+      <div class="member-stats">✅4 🔄0 剩余:1</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">吴金秀</span>
+        <span class="member-count">5项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:40%"></div>
+        <div class="bar-prog" style="width:60%"></div>
+      </div>
+      <div class="member-stats">✅2 🔄3 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">Wujiajia</span>
+        <span class="member-count">4项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:100%"></div>
+        <div class="bar-prog" style="width:0%"></div>
+      </div>
+      <div class="member-stats">✅4 🔄0 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">吴李杰</span>
+        <span class="member-count">3项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:33%"></div>
+        <div class="bar-prog" style="width:67%"></div>
+      </div>
+      <div class="member-stats">✅1 🔄2 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">宋鹏鸣</span>
+        <span class="member-count">3项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:67%"></div>
+        <div class="bar-prog" style="width:0%"></div>
+      </div>
+      <div class="member-stats">✅2 🔄0 剩余:1</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">管专</span>
+        <span class="member-count">3项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:100%"></div>
+        <div class="bar-prog" style="width:0%"></div>
+      </div>
+      <div class="member-stats">✅3 🔄0 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">黄永健</span>
+        <span class="member-count">2项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:0%"></div>
+        <div class="bar-prog" style="width:100%"></div>
+      </div>
+      <div class="member-stats">✅0 🔄2 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">余志坚</span>
+        <span class="member-count">2项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:0%"></div>
+        <div class="bar-prog" style="width:100%"></div>
+      </div>
+      <div class="member-stats">✅0 🔄2 剩余:0</div>
+    </div>
+    <div class="member-card">
+      <div class="member-top">
+        <span class="member-name">全小红</span>
+        <span class="member-count">2项</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-done" style="width:100%"></div>
+        <div class="bar-prog" style="width:0%"></div>
+      </div>
+      <div class="member-stats">✅2 🔄0 剩余:0</div>
+    </div>
+
+        <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">11/21 (52%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:52%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>直扩一体机研制</span>
+        <span style="color:#64748b">10/15 (67%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:67%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">2/12 (17%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:17%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">8/9 (89%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:89%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">5/6 (83%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:83%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">6/6 (100%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">2/4 (50%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:50%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">1/4 (25%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:25%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">3/3 (100%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="module-item">
+      <div class="module-top">
+        <span>{'id': 'uAhw', 'type':...</span>
+        <span style="color:#64748b">2/3 (67%)</span>
+      </div>
+      <div class="module-bar-bg">
+        <div class="module-bar" style="width:67%"></div>
+      </div>
+    </div>
+
+    
+    <div class='section-title'>⚠️ 已逾期任务</div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">超平载网2.0，控制溢胶范围，重做实验</div>
+      <div class="alert-meta">⚠️ 逾期 2024-08-09 · 孙芳</div>
+    </div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">工艺设计</div>
+      <div class="alert-meta">⚠️ 逾期 2023-07-01 · 孙芳</div>
+    </div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">01ESI喷射方案</div>
+      <div class="alert-meta">⚠️ 逾期 2025-04-25 · 陈伟栋,王亦飞</div>
+    </div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">113 样品筛选模块（二代升级）</div>
+      <div class="alert-meta">⚠️ 逾期 2026-04-01 · 孙芳</div>
+    </div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">01体硅芯片载网</div>
+      <div class="alert-meta">⚠️ 逾期 2023-06-01 · 孙芳</div>
+    </div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">性能分析</div>
+      <div class="alert-meta">⚠️ 逾期 2023-09-01 · 孙芳</div>
+    </div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">03点胶方案</div>
+      <div class="alert-meta">⚠️ 逾期 2025-04-13 · 孙芳</div>
+    </div>
+    <div class="alert-card alert-overdue">
+      <div class="alert-name">001 需求分析与架构设计</div>
+      <div class="alert-meta">⚠️ 逾期 2024-07-01 · polar</div>
+    </div>
+
+    
+    <div class='section-title'>⏰ 需补全截止日期 (5项)</div>
+    <div class="alert-card alert-urgent" style="border-color:#475569;background:#1e293b">
+      <div class="alert-name" style="font-size:11px">04-封装</div>
+      <div class="alert-meta">庄磊 · 未设置</div>
+    </div>
+    <div class="alert-card alert-urgent" style="border-color:#475569;background:#1e293b">
+      <div class="alert-name" style="font-size:11px">磁珠提取流程开发</div>
+      <div class="alert-meta">吴金秀 · 未设置</div>
+    </div>
+    <div class="alert-card alert-urgent" style="border-color:#475569;background:#1e293b">
+      <div class="alert-name" style="font-size:11px">样本前处理模块</div>
+      <div class="alert-meta">吴金秀 · 未设置</div>
+    </div>
+    <div class="alert-card alert-urgent" style="border-color:#475569;background:#1e293b">
+      <div class="alert-name" style="font-size:11px">直扩流程开发和测试</div>
+      <div class="alert-meta">吴金秀 · 未设置</div>
+    </div>
+    <div class="alert-card alert-urgent" style="border-color:#475569;background:#1e293b">
+      <div class="alert-name" style="font-size:11px">直扩一体机软件</div>
+      <div class="alert-meta">倪晓龙 · 未设置</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span style="color:#4ade80">✅</span> 已完成</div>
+  <div class="legend-item"><span style="color:#fbbf24">🔄</span> 进行中</div>
+  <div class="legend-item"><span style="color:#94a3b8">⬜</span> 未开始</div>
+  <div class="legend-item"><span style="color:#ef4444">❌</span> 取消</div>
+  <div class="legend-item"><span style="color:#f87171">⚠️</span> 逾期</div>
+  <div class="legend-item"><span style="color:#fb923c">🔥</span> 3天内</div>
+  <div class="legend-item"><span style="color:#fbbf24">⏰</span> 7天内</div>
+  <div class="legend-item" style="margin-left:auto;color:#475569">PCR一体机项目 · 截止 2026-04-21 · 149 任务</div>
+</div>
+
+</body>
+</html>
